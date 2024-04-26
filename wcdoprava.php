@@ -7,12 +7,12 @@
  * Author URI: https://github.com/tandler5
  * Plugin URI: https://github.com/tandler5/WC-Doprava
  */
-add_action( 'woocommerce_shipping_init', 'doprava_doprava_zasilkovna_init' );
-add_filter( 'woocommerce_shipping_methods', 'doprava_doprava_zasilkovna' );
-add_action( 'wp_footer', 'doprava_zasilkovna_scripts_checkout', 100 );
-add_action( 'woocommerce_review_order_after_shipping', 'doprava_zasilkovna_zobrazit_pobocky' );
-add_action( 'woocommerce_new_order_item', 'doprava_zasilkovna_ulozeni_pobocky', 10, 2 );
-add_action( 'woocommerce_checkout_process', 'doprava_zasilkovna_overit_pobocku' );
+add_action( 'woocommerce_shipping_init', 'doprava_doprava_dpd_init' );
+add_filter( 'woocommerce_shipping_methods', 'doprava_doprava_dpd' );
+add_action( 'wp_footer', 'doprava_dpd_scripts_checkout', 100 );
+add_action( 'woocommerce_review_order_after_shipping', 'doprava_dpd_zobrazit_pobocky' );
+add_action( 'woocommerce_new_order_item', 'doprava_dpd_ulozeni_pobocky', 10, 2 );
+add_action( 'woocommerce_checkout_process', 'doprava_dpd_overit_pobocku' );
 ////////////////POSTA/////////////////////////////////
 add_action( 'woocommerce_shipping_init', 'doprava_doprava_posta_init' );
 add_filter( 'woocommerce_shipping_methods', 'doprava_doprava_posta' );
@@ -37,8 +37,8 @@ add_action( 'woocommerce_checkout_process', 'doprava_gls_overit_pobocku' );
 
 add_action( 'woocommerce_review_order_after_shipping', 'return_shipping_method' );
 
-function doprava_doprava_zasilkovna_init() {
-  if ( ! class_exists( 'WC_Shipping_doprava_Zasilkovna' ) ) {
+function doprava_doprava_dpd_init() {
+  if ( ! class_exists( 'WC_Shipping_doprava_DPD' ) ) {
     require_once plugin_dir_path( __FILE__ ) . '/components/class-dpd.php';
   }
 }
@@ -62,8 +62,8 @@ function doprava_doprava_posta( $methods ) {
   return $methods;
 }
 
-function doprava_doprava_zasilkovna( $methods ) {
-  $methods['doprava_zasilkovna'] = 'WC_Shipping_doprava_Zasilkovna';
+function doprava_doprava_dpd( $methods ) {
+  $methods['doprava_dpd'] = 'WC_Shipping_doprava_DPD';
   return $methods;
 }
 function doprava_doprava_wedo( $methods ) {
@@ -76,7 +76,7 @@ function doprava_doprava_gls( $methods ) {
 }
 function return_shipping_method(){
     $chosen_shipping_method = WC()->session->get( 'chosen_shipping_methods' );
-    if(strpos( $chosen_shipping_method[0], "doprava_zasilkovna" ) === false&& strpos( $chosen_shipping_method[0], "doprava_posta" ) === false&& strpos( $chosen_shipping_method[0], "doprava_wedo" ) === false&& strpos( $chosen_shipping_method[0], "doprava_gls" ) === false){
+    if(strpos( $chosen_shipping_method[0], "doprava_dpd" ) === false&& strpos( $chosen_shipping_method[0], "doprava_posta" ) === false&& strpos( $chosen_shipping_method[0], "doprava_wedo" ) === false&& strpos( $chosen_shipping_method[0], "doprava_gls" ) === false){
         ?><script>document.getElementById("customer_details").getElementsByClassName("woocommerce-shipping-fields")[0].removeAttribute("style", "display:none;");
         document.getElementById("ship-to-different-address-checkbox").checked = false;
         document.getElementById("shipping_first_name").value = "";
@@ -93,35 +93,35 @@ function return_shipping_method(){
     }
 }
 
-function doprava_zasilkovna_zobrazit_pobocky() {
+function doprava_dpd_zobrazit_pobocky() {
   if ( is_ajax() ) {
-    $zasilkovna_branches = '';
+    $dpd_branches = '';
     if ( isset( $_POST['post_data'] ) ) {
       parse_str( $_POST['post_data'], $post_data );
       if ( isset( $post_data['packeta-point-id'] ) ) {
-        $zasilkovna_branches = $post_data['packeta-point-id'];
+        $dpd_branches = $post_data['packeta-point-id'];
       }
     }
     $chosen_shipping_method = WC()->session->get( 'chosen_shipping_methods' );
-    if ( strpos( $chosen_shipping_method[0], "doprava_zasilkovna" ) !== false ) { ?>
-      <tr class="zasilkovna">
+    if ( strpos( $chosen_shipping_method[0], "doprava_dpd" ) !== false ) { ?>
+      <tr class="dpd">
         <th>
           <img src="/wp-content/plugins/WC-Doprava-main/loga/DPD_logo_redgrad_rgb-300x133.png" width="200" border="0">
         </th>
         <td>
-            <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $zasilkovna_branches; ?>">
+            <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $dpd_branches; ?>">
           <input type="button" onclick="Packeta.Widget.pick(packetaApiKey, showSelectedPickupPoint)" value="Zvolit pobočku">
         </td>
       </tr>
-      <tr><th>Vybraná pobočka:</th><td><span id="packeta-point-info" style="font-weight:bold;"><?php if ( $zasilkovna_branches ) { echo $zasilkovna_branches; } else { echo "Zatím nevybráno"; } ?></span></td></tr>
+      <tr><th>Vybraná pobočka:</th><td><span id="packeta-point-info" style="font-weight:bold;"><?php if ( $dpd_branches ) { echo $dpd_branches; } else { echo "Zatím nevybráno"; } ?></span></td></tr>
     <?php } else { ?>
     <?php }
   }
 }
 
-function doprava_zasilkovna_ulozeni_pobocky( $item_id, $item ) {
+function doprava_dpd_ulozeni_pobocky( $item_id, $item ) {
   if ( isset( $_POST["packeta-point-id"] ) ) {
-    if ( ! empty( $_POST["packeta-point-id"] ) && strpos( $_POST["shipping_method"][0], "doprava_zasilkovna" ) !== false ) {
+    if ( ! empty( $_POST["packeta-point-id"] ) && strpos( $_POST["shipping_method"][0], "doprava_dpd" ) !== false ) {
       if ( version_compare( WC_VERSION, '3.0', '<' ) ) {
         $item_type = $item['order_item_type'];
       } else {
@@ -134,16 +134,16 @@ function doprava_zasilkovna_ulozeni_pobocky( $item_id, $item ) {
   }
 }
 
-function doprava_zasilkovna_overit_pobocku() {
+function doprava_dpd_overit_pobocku() {
   if ( isset( $_POST["packeta-point-id"] ) ) {
-    if (( empty( $_POST["packeta-point-id"])||$_POST["packeta-point-id"]==="undefined") && strpos( $_POST["shipping_method"][0], "doprava_zasilkovna" ) !== false ) {
+    if (( empty( $_POST["packeta-point-id"])||$_POST["packeta-point-id"]==="undefined") && strpos( $_POST["shipping_method"][0], "doprava_dpd" ) !== false ) {
       wc_add_notice( 'Pokud chcete doručit zboží prostřednictvím DPD Pickup, zvolte prosím pobočku.', 'error' );
     }
   }
 }
 
-function doprava_zasilkovna_objednavka_zobrazit_pobocku( $order ) {
-  if ( $order->has_shipping_method( 'doprava_zasilkovna' ) ) {
+function doprava_dpd_objednavka_zobrazit_pobocku( $order ) {
+  if ( $order->has_shipping_method( 'doprava_dpd' ) ) {
     foreach ( $order->get_shipping_methods() as $shipping_item_id => $shipping_item ) {
       if ( version_compare( WC_VERSION, '3.0', '<' ) ) {
         $pobocka = $order->get_item_meta( $shipping_item_id, 'DPD Pickup', true );
@@ -157,10 +157,10 @@ function doprava_zasilkovna_objednavka_zobrazit_pobocku( $order ) {
   }
 }
 
-function doprava_zasilkovna_scripts_checkout() {
+function doprava_dpd_scripts_checkout() {
   if ( is_checkout() ) {
-    $zasilkovna_settings = get_option( 'woocommerce_doprava_zasilkovna_settings' ); 
-     $api_klic = $zasilkovna_settings['op1']; ?>
+    $dpd_settings = get_option( 'woocommerce_doprava_dpd_settings' ); 
+     $api_klic = $dpd_settings['op1']; ?>
       <script src="/wp-content/plugins/WC-Doprava-main/js/dpd.js"></script>
       <script type="text/javascript">
         var packetaApiKey = '<?php echo $api_klic; ?>';
@@ -175,12 +175,12 @@ function doprava_zasilkovna_scripts_checkout() {
         if ( $storage_support ) {
           jQuery( document ).ready(function( $ ) {
             $( document.body ).on( 'updated_checkout', function() {
-              var doprava_zasilkovna = localStorage.getItem( 'doprava_zasilkovna' );
+              var doprava_dpd = localStorage.getItem( 'doprava_dpd' );
               if ( document.getElementById( 'packeta-point-info' ) !== null ) {
                 var paragraph = document.getElementById( 'packeta-point-info' ).firstChild;
-                if ( doprava_zasilkovna !== null ) {
-                  paragraph.nodeValue = doprava_zasilkovna;
-                  document.getElementById( 'packeta-point-id' ).value = doprava_zasilkovna;
+                if ( doprava_dpd !== null ) {
+                  paragraph.nodeValue = doprava_dpd;
+                  document.getElementById( 'packeta-point-id' ).value = doprava_dpd;
                 } else if ( paragraph !== "Zatím nevybráno" ) {
                   paragraph.nodeValue = "Zatím nevybráno";
                 }
@@ -195,18 +195,18 @@ function doprava_zasilkovna_scripts_checkout() {
             spanElement.innerText = point.name;
             idElement.value = point.name;
             if ( $storage_support ) {
-              localStorage.setItem( 'doprava_zasilkovna', point.name );
+              localStorage.setItem( 'doprava_dpd', point.name );
             }
           }
           else {
             if ( $storage_support ) {
-              var doprava_zasilkovna = localStorage.getItem( 'doprava_zasilkovna' );
+              var doprava_dpd = localStorage.getItem( 'doprava_dpd' );
             } else {
-              var doprava_zasilkovna = null;
+              var doprava_dpd = null;
             }
-            if ( doprava_zasilkovna !== null ) {
-              spanElement.innerText = doprava_zasilkovna;
-              idElement.value = doprava_zasilkovna;
+            if ( doprava_dpd !== null ) {
+              spanElement.innerText = doprava_dpd;
+              idElement.value = doprava_dpd;
             } else {
               spanElement.innerText = "Zatím nevybráno";
               idElement.value = "";
@@ -234,7 +234,7 @@ function doprava_posta_zobrazit_pobocky() {
           <img src="/wp-content/plugins/WC-Doprava-main/loga/cp.svg" width="200" border="0">
         </th>
         <td>
-        <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $zasilkovna_branches; ?>">
+        <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $dpd_branches; ?>">
           <input type="button" onclick="Packetaa.Widget.pick(packetaApiKey,packetaApiKey2, showSelectedPickupPoint)" value="Zvolit pobočku">
         </td>
       </tr>
@@ -359,7 +359,7 @@ function doprava_wedo_zobrazit_pobocky() {
           <img src="/wp-content/plugins/WC-Doprava-main/loga/WE_DO_na_bile_RGB.png" width="200" border="0">
         </th>
         <td>
-            <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $zasilkovna_branches; ?>">
+            <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $dpd_branches; ?>">
           <input type="button" onclick="Packetaaaa.Widget.pick(packetaApiKey,packetaApiKey2, showSelectedPickupPoint)" value="Zvolit pobočku">
         </td>
       </tr>
@@ -486,7 +486,7 @@ function doprava_gls_zobrazit_pobocky() {
           <img src="/wp-content/plugins/WC-Doprava-main/loga/GLS_Logo_2021_RGB_GLSBlue.png" width="200" border="0">
         </th>
         <td>
-         <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $zasilkovna_branches; ?>">
+         <input type="hidden" id="packeta-point-id" name="packeta-point-id" value="<?php echo $dpd_branches; ?>">
           <input type="button" onclick="Packetaaaaa.Widget.pick(packetaApiKey,packetaApiKey2, showSelectedPickupPoint)" value="Zvolit pobočku">
         </td>
       </tr>
@@ -597,7 +597,7 @@ function add_custom_order_totals_row1( $total_rows, $order, $tax_display ) {
     $total_rows['order_total'] = $gran_total;
     return $total_rows;
     }
-    else if ( $order->has_shipping_method( 'doprava_zasilkovna' ) ) {
+    else if ( $order->has_shipping_method( 'doprava_dpd' ) ) {
     foreach ( $order->get_shipping_methods() as $shipping_item_id => $shipping_item ) {
       if ( version_compare( WC_VERSION, '3.0', '<' ) ) {
         $pobocka = $order->get_item_meta( $shipping_item_id, 'DPD Pickup', true );
