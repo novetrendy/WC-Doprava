@@ -1,5 +1,5 @@
 <?php 
-class WC_Shipping_doprava_Zasilkovna extends WC_Shipping_Method{
+class WC_Shipping_doprava_DPD extends WC_Shipping_Method{
   public function __construct($instance_id=0){
     $this->instance_id=absint($instance_id);
     $this->id='doprava_zasilkovna';
